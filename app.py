@@ -2,72 +2,113 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
-st.set_page_config(page_title="Controle Forense Web", layout="wide")
+# Configuração da página para ocupar a tela inteira
+st.set_page_config(page_title="Controle Forense Web", layout="wide", page_icon="🔬")
 
 # Conexão com Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# Listas
+# --- LISTAS OFICIAIS (Ordem Alfabética) ---
 peritos = sorted(["Anderson", "Cyntia Toledo", "Flaudizio Barbosa", "José de Farias", "Renato", "Wellington Melo"])
 auxiliares = sorted(["Edson", "Tiago Abreu"])
-dispositivos = sorted(["Cartão de memória", "Chip", "Computador", "HD", "Notebook", "Pen drive", "Smartphone", "SSD"])
+dispositivos = sorted(["Smartphone", "Chip", "Cartão de memória", "Notebook", "Computador", "SSD", "HD", "Pen drive"])
 
 st.title("🔬 Sistema de Gestão - Informática Forense")
 
-aba = st.sidebar.radio("Navegação", ["Painel de Controle", "Cadastrar REP/Vestígio"])
+# Menu de Navegação Lateral
+aba = st.sidebar.radio("Navegação", ["📊 Painel de Controle", "📝 Cadastrar REP/Vestígio"])
 
-if aba == "Painel de Controle":
-    st.header("📊 REPs e Vestígios")
+if aba == "📊 Painel de Controle":
+    st.header("Lista de REPs e Vestígios")
+    
     try:
-        # Lê os dados da aba VESTIGIOS
-        df = conn.read(worksheet="VESTIGIOS")
-        if not df.empty:
-            f_perito = st.selectbox("Filtrar Perito", ["Todos"] + peritos)
-            if f_perito != "Todos":
-                df = df[df["Perito"] == f_perito]
-            st.dataframe(df, use_container_width=True)
-        else:
-            st.info("A planilha está vazia.")
-    except Exception as e:
-        st.error("Erro ao ler planilha. Verifique se o nome da aba é VESTIGIOS.")
-
-elif aba == "Cadastrar REP/Vestígio":
-    st.header("📝 Nova Entrada")
-    with st.form("form_entrada"):
-        c1, c2 = st.columns(2)
-        rep = c1.text_input("Número da REP")
-        perito_sel = c2.selectbox("Perito Responsável", peritos)
-        lacre = st.text_input("Número do Lacre")
-        tipo = st.selectbox("Tipo", dispositivos)
-        auxiliar = st.selectbox("Auxiliar", auxiliares)
+        # Lê os dados da planilha forçando atualização (ttl=0)
+        df = conn.read(worksheet="VESTIGIOS", ttl=0)
         
-        st.divider()
-        c3, c4 = st.columns(2)
-        with c3:
-            acesso = st.radio("Acesso", ["Bloqueado", "Desbloqueado"])
-            tipo_bloq = st.selectbox("Tipo de Bloqueio", ["Nenhum", "Padrão", "Senha PIN", "Alfanumérico", "Biometria"])
-            metodo_desb = st.text_input("Método de Desbloqueio")
-        with c4:
-            ferramenta = st.selectbox("Ferramenta", ["UFED", "XRY", "Avilla", "Magnet AXIOM", "Outro"])
-            tipo_ext = st.selectbox("Tipo de Extração", ["Lógica", "Sistema de Arquivos", "Física", "SmartFlow"])
-            relatorio = st.selectbox("Relatório", ["P.A", "IPED", "XRY Reader", "Outro"])
+        if not df.empty:
+            # Filtros no topo do painel
+            c1, c2 = st.columns(2)
+            with c1:
+                f_perito = st.selectbox("Filtrar por Perito", ["Todos"] + peritos)
+            with c2:
+                f_lacre = st.text_input("Buscar por Número do Lacre")
 
-        if st.form_submit_button("Salvar na Planilha"):
-            # Lógica para adicionar nova linha
-            nova_linha = pd.DataFrame([{
-                "REP": rep, "Perito": perito_sel, "Lacre": lacre, "Tipo": tipo,
-                "Auxiliar": auxiliar, "Acesso": acesso, "Bloqueio": tipo_bloq,
-                "Metodo": metodo_desb, "Ferramenta": ferramenta, "Extracao": tipo_ext, "Relatorio": relatorio
-            }])
+            # Aplicação dos filtros
+            df_filtrado = df.copy()
+            if f_perito != "Todos":
+                df_filtrado = df_filtrado[df_filtrado["Perito"] == f_perito]
+            if f_lacre:
+                df_filtrado = df_filtrado[df_filtrado["Lacre"].astype(str).str.contains(f_lacre, na=False)]
             
-            # Tenta ler dados existentes para concatenar
-            try:
-                existentes = conn.read(worksheet="VESTIGIOS")
-                updated_df = pd.concat([existentes, nova_linha], ignore_index=True)
-            except:
-                updated_df = nova_linha
+            st.dataframe(df_filtrado, use_container_width=True)
             
-            # Atualiza a planilha
-            conn.update(worksheet="VESTIGIOS", data=updated_df)
-            st.success("Dados salvos com sucesso! Atualize a página do Dashboard.")
-            st.cache_data.clear() # Limpa o cache para forçar a leitura nova
+            if st.button("🔄 Atualizar Dados"):
+                st.cache_data.clear()
+                st.rerun()
+        else:
+            st.info("A planilha está vazia. Cadastre o primeiro vestígio na aba ao lado.")
+            
+    except Exception as e:
+        st.error("Erro ao ler a planilha. Verifique se o nome da aba é VESTIGIOS e se os títulos estão corretos.")
+
+elif aba == "📝 Cadastrar REP/Vestígio":
+    st.header("Cadastro de Nova Entrada")
+    
+    with st.form("form_entrada", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            rep = st.text_input("Número da REP (Ex: 2026-INF-001)")
+            perito_sel = st.selectbox("Perito Responsável", peritos)
+            lacre = st.text_input("Número do Lacre")
+        with col2:
+            tipo = st.selectbox("Tipo de Dispositivo", dispositivos)
+            auxiliar = st.selectbox("Auxiliar que realizou a ação", auxiliares)
+
+        st.divider()
+        st.subheader("⚙️ Detalhes Técnicos e Extração")
+        
+        col_a, col_b = st.columns(2)
+        with col_a:
+            acesso = st.radio("Estado de Acesso", ["Bloqueado", "Desbloqueado"], horizontal=True)
+            tipo_bloq = st.selectbox("Tipo de Bloqueio", ["Nenhum", "Padrão", "Senha PIN", "Alfanumérico", "Biometria"])
+            metodo_desb = st.text_input("Como foi realizado o desbloqueio? (Ex: Tentativa, UFED, XRY)")
+        
+        with col_b:
+            ferramenta = st.selectbox("Ferramenta de Extração", ["UFED", "XRY", "Avilla", "Magnet AXIOM", "Outro"])
+            tipo_ext = st.selectbox("Tipo de Extração", ["Lógica", "Sistema de Arquivos", "Física", "SmartFlow"])
+            relatorio = st.selectbox("Relatório Gerado em:", ["P.A (Physical Analyzer)", "IPED", "XRY Reader", "Outro"])
+
+        if st.form_submit_button("🚀 Salvar Registro"):
+            if not rep or not lacre:
+                st.warning("Por favor, preencha o número da REP e do Lacre.")
+            else:
+                # Cria a nova linha de dados
+                nova_linha = pd.DataFrame([{
+                    "REP": str(rep),
+                    "Perito": perito_sel,
+                    "Lacre": str(lacre),
+                    "Tipo": tipo,
+                    "Auxiliar": auxiliar,
+                    "Acesso": acesso,
+                    "Bloqueio": tipo_bloq,
+                    "Metodo": metodo_desb,
+                    "Ferramenta": ferramenta,
+                    "Extracao": tipo_ext,
+                    "Relatorio": relatorio
+                }])
+                
+                try:
+                    # Lê dados atuais
+                    try:
+                        existentes = conn.read(worksheet="VESTIGIOS", ttl=0)
+                        df_final = pd.concat([existentes, nova_linha], ignore_index=True)
+                    except:
+                        df_final = nova_linha
+                    
+                    # Salva no Google Sheets
+                    conn.update(worksheet="VESTIGIOS", data=df_final)
+                    
+                    st.success(f"✅ Sucesso! Lacre {lacre} (REP {rep}) salvo na planilha.")
+                    st.cache_data.clear()
+                except Exception as e:
+                    st.error(f"Erro ao salvar: Verifique se a planilha está como 'Editor' para qualquer pessoa com o link. Detalhe: {e}")
