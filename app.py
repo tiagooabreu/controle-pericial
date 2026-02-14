@@ -23,7 +23,7 @@ if aba == "📊 Painel de Controle":
     
     try:
         # ttl=0 força o sistema a buscar dados novos sempre
-        df = conn.read(worksheet="VESTIGIOS", ttl=0)
+        df = conn.read(worksheet="VESTIGIOS")
         
         if df is not None and not df.empty:
             # Filtros
