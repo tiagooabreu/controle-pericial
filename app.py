@@ -5,11 +5,10 @@ import pandas as pd
 # Configuração da página
 st.set_page_config(page_title="Controle Forense Web", layout="wide", page_icon="🔬")
 
-# --- CONEXÃO COM GOOGLE SHEETS ---
+# --- CONEXÃO ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# Leitura dos dados da aba VESTIGIOS
-# Se der erro aqui, verifique o compartilhamento da planilha
+# Leitura dos dados - Esta é a linha 13 que deve funcionar agora
 df = conn.read(worksheet="VESTIGIOS")
 
 # --- LISTAS OFICIAIS ---
@@ -17,7 +16,7 @@ peritos = sorted(["Anderson", "Cyntia Toledo", "Flaudizio Barbosa", "José de Fa
 auxiliares = sorted(["Edson", "Tiago Abreu"])
 tipos_dispositivos = sorted(["Smartphone", "Chip", "Notebook", "Computador", "SSD", "HD", "Pen drive"])
 
-# --- INTERFACE DO USUÁRIO ---
+# --- INTERFACE ---
 st.title("🔬 Sistema de Gestão - Informática Forense")
 
 menu = st.sidebar.radio("Navegação", ["Painel de Controle", "Cadastrar REP/Vestígio"])
@@ -47,24 +46,17 @@ elif menu == "Cadastrar REP/Vestígio":
         
         if submit:
             if rep:
-                # Criando nova linha com as colunas EXATAS da sua planilha (image_3b2b41)
+                # Criando nova linha conforme as colunas da sua planilha (image_3b2b41)
                 new_data = pd.DataFrame([{
-                    "REP": rep,
-                    "Perito": perito,
-                    "Lacre": lacre,
-                    "Tipo": tipo,
-                    "Auxiliar": auxiliar,
-                    "Acesso": "",
-                    "Bloqueio": "",
-                    "Metodo": metodo,
-                    "Ferramenta": "",
-                    "Extracao": "",
-                    "Relatorio": "Pendente"
+                    "REP": rep, "Perito": perito, "Lacre": lacre, 
+                    "Tipo": tipo, "Auxiliar": auxiliar, "Acesso": "", 
+                    "Bloqueio": "", "Metodo": metodo, "Ferramenta": "", 
+                    "Extracao": "", "Relatorio": "Pendente"
                 }])
                 
                 updated_df = pd.concat([df, new_data], ignore_index=True)
                 conn.update(worksheet="VESTIGIOS", data=updated_df)
                 st.success(f"✅ REP {rep} salva com sucesso!")
-                st.balloons()
+                st.rerun()
             else:
                 st.error("⚠️ O campo REP é obrigatório.")
