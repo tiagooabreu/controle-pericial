@@ -6,6 +6,7 @@ import pandas as pd
 st.set_page_config(page_title="Controle Forense Web", layout="wide", page_icon="🔬")
 
 # Conexão com Google Sheets usando Service Account (Secrets)
+# Versão simplificada que funciona com o link público
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- LISTAS OFICIAIS ---
