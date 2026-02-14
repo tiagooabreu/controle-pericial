@@ -9,8 +9,7 @@ st.set_page_config(page_title="Controle Forense Web", layout="wide", page_icon="
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # Leitura dos dados - Esta é a linha 13 que deve funcionar agora
-df = conn.read(worksheet="VESTIGIOS")
-
+df = conn.read()
 # --- LISTAS OFICIAIS ---
 peritos = sorted(["Anderson", "Cyntia Toledo", "Flaudizio Barbosa", "José de Farias", "Renato", "Wellington Melo"])
 auxiliares = sorted(["Edson", "Tiago Abreu"])
